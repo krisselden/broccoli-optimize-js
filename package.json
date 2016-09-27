@@ -1,0 +1,40 @@
+{
+  "name": "broccoli-optimize-js",
+  "version": "1.0.0",
+  "description": "broccoli filter for optimize-js",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js",
+    "prepublish": "rollup -c",
+    "build": "rollup -c"
+  },
+  "files": [
+    "index.js",
+    "index.js.map"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/krisselden/broccoli-optimize-js.git"
+  },
+  "keywords": [
+    "broccoli",
+    "optimize-js"
+  ],
+  "author": "Kris Selden",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/krisselden/broccoli-optimize-js/issues"
+  },
+  "homepage": "https://github.com/krisselden/broccoli-optimize-js#readme",
+  "dependencies": {
+    "broccoli-persistent-filter": "^1.2.11",
+    "json-stable-stringify": "^1.0.1",
+    "optimize-js": "^1"
+  },
+  "devDependencies": {
+    "broccoli": "^0.16.9",
+    "broccoli-file-creator": "^1.1.1",
+    "rollup": "^0.36.0",
+    "rollup-plugin-buble": "^0.14.0"
+  }
+}
