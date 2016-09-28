@@ -1,6 +1,7 @@
 import Filter from 'broccoli-persistent-filter';
 import optimizeJs from 'optimize-js';
 import stringify from 'json-stable-stringify';
+import { basename } from 'path';
 import { createHash } from 'crypto';
 
 const SOURCE_MAPPING_TOKEN = '//# sourceMap' + 'pingURL=';
@@ -40,7 +41,7 @@ export default class OptimizeJs extends Filter {
   }
 
   processString(code, file) {
-    let original = { code, file: '/' + file };
+    let original = { code, file: basename(file) };
     let minified;
     let optimized;
     if (this.compressorOptions) {
@@ -62,9 +63,7 @@ export default class OptimizeJs extends Filter {
 
   minify(source) {
     let UglifyJS = require('uglify-js');
-    let ast = UglifyJS.parse(source.code, {
-      filename: source.file
-    });
+    let ast = UglifyJS.parse(source.code, { filename: source.file });
     ast.figure_out_scope();
 
     let compressor = UglifyJS.Compressor(this.compressorOptions);
@@ -82,11 +81,7 @@ export default class OptimizeJs extends Filter {
     compressed_ast.print(stream);
     let code = stream.toString(); // this is your minified code
     let map = source_map.get().toJSON();
-    return {
-      code,
-      file,
-      map
-    };
+    return { code, file, map };
   }
 
   optimize(source) {
@@ -127,10 +122,7 @@ export default class OptimizeJs extends Filter {
         [optimized.file]: optimized.map
       }
     });
-    let map = chain.apply({
-		  includeContent: true
-	  });
-
+    let map = chain.apply({ includeContent: true });
     return optimized.code + map.toUrl();
   }
 }
