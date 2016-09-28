@@ -4,13 +4,18 @@ var writeFile = require('broccoli-file-creator');
 var fs = require('fs');
 var assert = require('assert');
 
-var builder = new Builder(
-  new OptimizeJs(writeFile('negate-iife.js', '!function(){}();'))
-);
+var input = writeFile('some/module.js', 'define("foo",["exports"], function (exports){});');
+var optimize = new OptimizeJs(input, {
+  sourceMap: true,
+  compressorOptions: {
+    negate_iife: false
+  }
+});
+var builder = new Builder(optimize);
 
 builder.build().then(function (result) {
   try {
-    var actual = fs.readFileSync(result.directory + '/negate-iife.js', 'utf8');
+    var actual = fs.readFileSync(result.directory + '/some/module.js', 'utf8');
     assert.equal(actual, '!(function(){})();');
   } finally {
     builder.cleanup();
