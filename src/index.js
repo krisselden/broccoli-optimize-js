@@ -1,5 +1,4 @@
 import Filter from 'broccoli-persistent-filter';
-import optimizeJs from 'optimize-js';
 import stringify from 'json-stable-stringify';
 import assign from 'lodash.assign';
 import { basename } from 'path';
@@ -10,7 +9,13 @@ const SOURCE_MAPPING_TOKEN_LEN = SOURCE_MAPPING_TOKEN.length;
 const BASE64_TOKEN = 'base64,';
 const BASE64_TOKEN_LEN = BASE64_TOKEN.length;
 
-export default class OptimizeJs extends Filter {
+export default function optimizeJs(inputNode, options) {
+  return new OptimizeJs(inputNode, options);
+}
+
+optimizeJs.OptimizeJs = OptimizeJs;
+
+class OptimizeJs extends Filter {
   constructor(inputNode, _options) {
     super(inputNode, {
       persist: true
@@ -134,6 +139,7 @@ export default class OptimizeJs extends Filter {
 
   optimize(source) {
     let { sourceMap } = this.options;
+    let optimizeJs = require('optimize-js');
     let code = optimizeJs( source.code, { sourceMap } );
     let file = source.file + '.opt';
     let map;
