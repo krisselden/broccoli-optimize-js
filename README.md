@@ -2,8 +2,8 @@
 
 JS optimizer for broccoli using
 
-[UglifyJS2](https://github.com/mishoo/UglifyJS2)
-[optimize-js](https://github.com/nolanlawson/optimize-js)
+* [UglifyJS2](https://github.com/mishoo/UglifyJS2)
+* [optimize-js](https://github.com/nolanlawson/optimize-js)
 
 ## Installation
 
