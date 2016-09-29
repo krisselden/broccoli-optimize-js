@@ -1,6 +1,7 @@
 import Filter from 'broccoli-persistent-filter';
 import optimizeJs from 'optimize-js';
 import stringify from 'json-stable-stringify';
+import assign from 'lodash.assign';
 import { basename } from 'path';
 import { createHash } from 'crypto';
 
@@ -14,14 +15,37 @@ export default class OptimizeJs extends Filter {
     super(inputNode, {
       persist: true
     });
+
     let options = _options || {};
 
     // Filter doesn't pass this to Plugin
-    this._optionsHash = null;
     this._annotation = options.annotation;
-    this.sourceMap = !!options.sourceMap;
-    this.compressorOptions = options.compressorOptions;
-    this.options = options;
+
+    let sourceMap = !!options.sourceMap;
+    let mangle = !!options.mangle;
+    let compress = options.compress;
+    let output = options.output;
+    let eager = !!options.eager;
+
+    if (compress) {
+      // negate_iife causes IIFE to be not to
+      // be recognized as eager in Chrome and while
+      // this is fixed by optimize-js but it will
+      // also make define() eager as well and is not
+      // configurable at the moment
+      compress = assign({}, compress, {
+        negate_iife: false
+      });
+    }
+
+    this._optionsHash = null;
+    this.options = { sourceMap, mangle, compress, output, eager };
+
+    if (!mangle && !compress && !eager) {
+      // TODO heimdall logger
+      console.warn('nothing to do, all optimizations disabled');
+      this.canProcessFile = () => false;
+    }
   }
 
   baseDir() {
@@ -41,51 +65,75 @@ export default class OptimizeJs extends Filter {
   }
 
   processString(code, file) {
+    let { sourceMap, mangle, compress, eager } = this.options;
     let original = { code, file: basename(file) };
     let minified;
     let optimized;
-    if (this.compressorOptions) {
+
+    if (mangle || compress) {
       minified = this.minify(original);
-      optimized = this.optimize(minified);
-    } else {
-      optimized = this.optimize(original);
     }
 
-    if (this.sourceMap) {
+    if (eager) {
+      optimized = this.optimize(minified || original);
+    }
+
+    if (sourceMap) {
       return this.processMap({
         original,
         minified,
         optimized
       });
     }
-    return optimized.code;
+
+    if (optimized) {
+      return optimized.code;
+    }
+
+    return minified.code;
   }
 
   minify(source) {
     let UglifyJS = require('uglify-js');
+    let { sourceMap, mangle, compress, output } = this.options;
+
     let ast = UglifyJS.parse(source.code, { filename: source.file });
     ast.figure_out_scope();
 
-    let compressor = UglifyJS.Compressor(this.compressorOptions);
-    let compressed_ast = ast.transform(compressor);
+    if (compress) {
+      let compressor = UglifyJS.Compressor(compress);
+      ast = ast.transform(compressor);
+    }
 
-    compressed_ast.figure_out_scope();
-    compressed_ast.compute_char_frequency();
-    compressed_ast.mangle_names();
+    if (mangle) {
+      ast.figure_out_scope();
+      ast.compute_char_frequency();
+      ast.mangle_names();
+    }
 
     let file = source.file + '.min';
-    let source_map = UglifyJS.SourceMap();
-    var stream = UglifyJS.OutputStream({
-        source_map: source_map
-    });
-    compressed_ast.print(stream);
-    let code = stream.toString(); // this is your minified code
-    let map = source_map.get().toJSON();
+    if (sourceMap) {
+      output = assign({}, output, {
+        source_map: UglifyJS.SourceMap()
+      });
+    }
+
+    let stream = UglifyJS.OutputStream(output);
+    ast.print(stream);
+
+    let code = stream.toString();
+    let map;
+    if (sourceMap) {
+      map = output.source_map.get().toJSON();
+      map.sources[0] = source.file;
+      map.sourcesContent = [ source.code ];
+    }
+
     return { code, file, map };
   }
 
   optimize(source) {
-    let sourceMap = this.sourceMap;
+    let { sourceMap } = this.options;
     let code = optimizeJs( source.code, { sourceMap } );
     let file = source.file + '.opt';
     let map;
@@ -102,34 +150,30 @@ export default class OptimizeJs extends Filter {
   }
 
   processMap({original, minified, optimized}) {
-    if (!optimized.map) {
-      return optimized.code;
-    }
-
-    if (!minified.map) {
-      return optimized.code + toURL(optimized.map);
-    }
-
     let sorcery = require('sorcery');
-    let chain = sorcery.loadSync(optimized.file, {
-      content: {
-        [original.file]: original.code,
-        [minified.file]: minified.code,
-        [optimized.file]: optimized.code
-      },
-      sourcemaps: {
-        [minified.file]: minified.map,
-        [optimized.file]: optimized.map
-      }
-    });
-    let map = chain.apply({ includeContent: true });
-    return optimized.code + map.toUrl();
-  }
-}
 
-function toURL(map) {
-  return SOURCE_MAPPING_TOKEN + 'data:application/json;charset=utf-8;base64,' +
-    new Buffer(JSON.stringify(map), 'utf8').toString('base64');
+    let generated;
+    let content = Object.create(null);
+    let sourcemaps = Object.create(null);
+    content[original.file] = original.code;
+
+    if (minified) {
+      generated = minified;
+      content[minified.file] = minified.code;
+      sourcemaps[minified.file] = minified.map;
+    }
+
+    if (optimized) {
+      generated = optimized;
+      content[optimized.file] = optimized.code;
+      sourcemaps[optimized.file] = optimized.map;
+    }
+
+    let chain = sorcery.loadSync(generated.file, { content, sourcemaps });
+    let map = chain.apply({ includeContent: true });
+
+    return generated.code + map.toUrl();
+  }
 }
 
 function parseSourceMap(dataURL) {

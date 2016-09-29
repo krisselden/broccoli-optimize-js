@@ -30,6 +30,7 @@
   "dependencies": {
     "broccoli-persistent-filter": "^1.2.11",
     "json-stable-stringify": "^1.0.1",
+    "lodash.assign": "^4.2.0",
     "optimize-js": "^1",
     "sorcery": "^0.10.0",
     "uglify-js": "^2"

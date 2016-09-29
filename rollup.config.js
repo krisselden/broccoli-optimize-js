@@ -6,7 +6,7 @@ module.exports = {
   entry: 'src/index.js',
   plugins: [buble()],
   sourceMap: true,
-  external: external.concat('crypto'),
+  external: external.concat(['crypto', 'path']),
   dest: pkg['main'],
   format: 'cjs'
 };
