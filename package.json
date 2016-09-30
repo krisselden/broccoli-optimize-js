@@ -1,6 +1,6 @@
 {
   "name": "broccoli-optimize-js",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "broccoli filter for optimize-js",
   "main": "index.js",
   "scripts": {
