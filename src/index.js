@@ -175,6 +175,12 @@ class OptimizeJs extends Filter {
       sourcemaps[optimized.file] = optimized.map;
     }
 
+    // not sure if a module is empty of code if
+    // we should still create a map with the original source?
+    if (!generated.code || !generated.map.mappings) {
+      return generated.code;
+    }
+
     let chain = sorcery.loadSync(generated.file, { content, sourcemaps });
     let map = chain.apply({ includeContent: true });
 
