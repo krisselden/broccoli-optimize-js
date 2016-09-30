@@ -178,7 +178,7 @@ class OptimizeJs extends Filter {
     let chain = sorcery.loadSync(generated.file, { content, sourcemaps });
     let map = chain.apply({ includeContent: true });
 
-    return generated.code + map.toUrl();
+    return generated.code + SOURCE_MAPPING_TOKEN + map.toUrl();
   }
 }
 
